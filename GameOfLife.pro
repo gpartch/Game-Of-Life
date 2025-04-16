@@ -7,4 +7,6 @@ SOURCES +=  Viewer.cpp \
 
 LIBS += -lopengl32
 
+CONFIG += console
+
 QT += core opengl gui widgets openglwidgets
