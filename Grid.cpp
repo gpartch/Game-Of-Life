@@ -7,7 +7,7 @@ Grid::Grid(QWidget *parent) : QOpenGLWidget(parent)
     // Set size policy to allow scaling while maintaining aspect ratio
     setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
 
-    readColorFile("colors.txt");
+    readColorFile("../colors.txt");
 }
 Grid::~Grid() {}
 
@@ -67,8 +67,9 @@ void Grid::resizeGL(int w, int h)
 void Grid::readColorFile(const QString &filename)
 {
     QFile file(filename);
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        qWarning("Could not open color file for reading.");
+    if (!file.open(QIODeviceBase::ReadOnly, QFileDevice::ReadUser)) {
+        qWarning("Failed to open color file");
+        gridColors.push_back(QColor(0,0,0));
         return;
     }
 
