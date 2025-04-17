@@ -1,4 +1,4 @@
-#11120c
+#ffffff
 #916aa1
 #eb6dad
 #e5a231
