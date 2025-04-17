@@ -6,6 +6,10 @@
 #include <QWidget>
 #include <QDockWidget>
 #include <QSizePolicy>
+#include <QGroupBox>
+#include <QLabel>
+#include <QButtonGroup>
+#include <QPushButton>
 
 #include "Grid.hpp"
 

@@ -13,13 +13,15 @@ Grid::Grid(QWidget *parent) : QOpenGLWidget(parent)
     dead = {1,1,0,1,1,1,1,1};
 
     probability = 20;
-    t_step = 0;
+    t_step = 100;
+    t = 0;
     iterations = -1;
 
     // set timer properties
-    timer.setInterval(t_step);
-    connect(&timer,SIGNAL(timeout()),this,SLOT(update()));
-    timer.start();
+    //timer.setInterval(0);
+    timer.setTimerType(Qt::PreciseTimer);
+    connect(&timer,SIGNAL(timeout()),this,SLOT(gridTimeout()));
+    timer.start(t_step);
 
     r_gen = new QRandomGenerator();
     for(int i=0; i<2; i++) framebuffer[i] = nullptr;
@@ -151,4 +153,31 @@ bool Grid::hasHeightForWidth() const
 int Grid::heightForWidth(int width) const
 {
     return width; // Maintain a 1:1 asp ratio
+}
+
+void Grid::gridTimeout()
+{
+    t += t_step;
+    QString time = formatTime(t);
+    emit viewerElapsedTime(time);
+    update();
+}
+void Grid::gridPlay()
+{
+    timer.start();
+}
+void Grid::gridPause()
+{
+    timer.stop();
+}
+QString Grid::formatTime(int time)
+{
+    int iseconds = (time/1000)%60;
+    int iminutes = floor(time/60000);
+    QString sseconds = QString::number(iseconds);
+    QString sminutes = QString::number(iminutes);
+    if (sseconds.length() == 1) sseconds = "0" + sseconds;
+    if (sminutes.length() == 1) sminutes = "0" + sminutes;
+    if (sminutes.length() > 2) qFatal() << "Exceeded maximum play time";
+    return sminutes + ":" + sseconds;
 }

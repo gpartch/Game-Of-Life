@@ -65,6 +65,7 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
 
         void readColorFile(const QString &filename);
         void initPattern();
+        QString formatTime(int t);
         
         bool hasHeightForWidth() const override;
         int heightForWidth(int width) const override;
@@ -81,12 +82,21 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
         rule alive;
         rule dead;
         int iterations; // counter for the number of iterations
-        float t_step; // the amount of time between iterations
+        float t_step; // the amount of time between iterations in milliseconds
+        int t; // time in milliseconds
 
         QTimer timer;
         QRandomGenerator* r_gen;
         QOpenGLFramebufferObject* framebuffer[2];
         //QOpenGLShaderProgram* shader;
+
+    public slots:
+        void gridTimeout();
+        void gridPlay();
+        void gridPause();
+
+    signals:
+        void viewerElapsedTime(QString time);
 };
 
 #endif
