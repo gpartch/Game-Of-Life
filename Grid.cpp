@@ -2,34 +2,70 @@
 
 Grid::Grid(QWidget *parent) : QOpenGLWidget(parent)
 {
-    dim = 1;
+    width = 500;
+    height = 500;
+    buffer = 25;
 
-    // Set size policy to allow scaling while maintaining aspect ratio
-    setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Preferred);
+    colorfile = "../colors.txt";
+    fragfile = "../gol.frag";
 
-    readColorFile("../colors.txt");
+    alive = {0,1,1,0,0,0,0,0};
+    dead = {1,1,0,1,1,1,1,1};
+
+    probability = 20;
+    t_step = 0;
+    iterations = -1;
+
+    // set timer properties
+    timer.setInterval(t_step);
+    connect(&timer,SIGNAL(timeout()),this,SLOT(update()));
+    timer.start();
+
+    r_gen = new QRandomGenerator();
+    for(int i=0; i<2; i++) framebuffer[i] = nullptr;
+
+    // Set size policy to allow scaling while maintaining asp ratio
+    setSizePolicy(QSizePolicy::Minimum,QSizePolicy::Minimum);
+
+    readColorFile(colorfile);
 }
 Grid::~Grid() {}
+
+QSize Grid::sizeHint() const
+{
+    return QSize(width, height);
+}
 
 void Grid::initializeGL()
 {
     initializeOpenGLFunctions();
-    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClearColor(0, 0, 0, 1);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    for(int i=0; i<2; i++) framebuffer[i] = new QOpenGLFramebufferObject(width,height);
+
+    //  Load shader
+    //shader = new QOpenGLShaderProgram;
+    //  Fragment shader
+    // if (!shader->addShaderFromSourceFile(QOpenGLShader::Fragment,fragfile))
+    //     qFatal() << "Error compiling" << fragfile << "\n" << shader->log();
+    // //  Link
+    // if (!shader->link())
+    //     qFatal() << "Error linking shader\n"+shader->log();
 }
 
 void Grid::paintGL()
 {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    //glClear(GL_COLOR_BUFFER_BIT);
 
-    // circle(1,20);
-    float size = .5;
-    glColor3f(1,1,1);
-    glBegin(GL_QUADS);
-        glVertex2d(-size,-size);
-        glVertex2d(size,-size);
-        glVertex2d(size,size);
-        glVertex2d(-size,size);
-    glEnd();
+    // if(iterations == -1)
+    // {
+        glClear(GL_COLOR_BUFFER_BIT);
+        glColor3f(1,1,1);
+        //  Initialize pattern
+        initPattern();
+        iterations++;
+    //}
 
     glFlush();
 }
@@ -39,8 +75,8 @@ void Grid::resizeGL(int w, int h)
     // Prevent division by zero
     if (h == 0) h = 1;
 
-    // Calculate aspect ratio
-    float aspect = static_cast<float>(w) / h;
+    width = w;
+    height = h;
 
     // Set the viewport to cover the entire widget
     glViewport(0, 0, w, h);
@@ -48,13 +84,7 @@ void Grid::resizeGL(int w, int h)
     // Adjust the projection matrix to maintain aspect ratio
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    if (aspect > 1.0f) {
-        // Wider than tall
-        glOrtho(-dim * aspect, dim * aspect, -dim, dim, -dim, dim);
-    } else {
-        // Taller than wide
-        glOrtho(-dim, dim, -dim / aspect, dim / aspect, -dim, dim);
-    }
+    glOrtho(-buffer, w+buffer, -buffer, h+buffer, -1, 1);
 
     // Reset the model-view matrix
     glMatrixMode(GL_MODELVIEW);
@@ -95,15 +125,22 @@ void Grid::readColorFile(const QString &filename)
     }
 }
 
-void Grid::circle(float r, int subsec)
+void Grid::initPattern()
 {
-    float dth = 360 / subsec;
-    glBegin(GL_TRIANGLES);
-    for(int i = 0; i <= 360; i += dth)
+    makeCurrent();
+    glClear(GL_COLOR_BUFFER_BIT);
+    for(int w=0; w<width; w++)
     {
-        glVertex2d(r*Cos(i),r*Sin(i));
+        for(int h=0; h<height; h++)
+        {
+            if(r_gen->bounded(100) <= probability)
+            {
+                GLubyte dot[] = {0xFF};
+                glRasterPos2i(w, height - h);
+                glBitmap(1,1,0,0,0,0,dot);
+            }
+        }
     }
-    glEnd();
 }
 
 bool Grid::hasHeightForWidth() const
@@ -113,5 +150,5 @@ bool Grid::hasHeightForWidth() const
 
 int Grid::heightForWidth(int width) const
 {
-    return width; // Maintain a 1:1 aspect ratio
+    return width; // Maintain a 1:1 asp ratio
 }

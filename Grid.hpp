@@ -12,8 +12,37 @@
 #include <QOpenGLTexture>
 #include <QColor>
 #include <QFile>
+#include <QRandomGenerator>
+#include <QOpenGLFramebufferObject>
+#include <QTimer>
 
 using std::stoi;
+using std::vector;
+
+// Conway's Game Of Life:
+/* alive:
+[1] - 0
+[2] - 1
+[3] - 1
+[4] - 0
+[5] - 0
+[6] - 0
+[7] - 0
+[8] - 0
+*/
+/* dead:
+[1] - 1
+[2] - 1
+[3] - 0
+[4] - 1
+[5] - 1
+[6] - 1
+[7] - 1
+[8] - 1
+*/
+
+// does the state persist or flip based on the number of neighbors, 0 if it flips, 1 if the state stays the same
+struct rule {int persist[8];};
 
 #define Cos(x) (cos((x)*3.14159265/180))
 #define Sin(x) (sin((x)*3.14159265/180))
@@ -21,11 +50,13 @@ using std::stoi;
 class Grid : public QOpenGLWidget, protected QOpenGLFunctions
 {
     Q_OBJECT
-    QSize sizeHint() const {return QSize(800,800);}
+    
 
     public:
         Grid(QWidget *parent = nullptr);
         ~Grid();
+
+        QSize sizeHint() const override;
 
         // GL functions
         void initializeGL() override;
@@ -33,18 +64,29 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
         void resizeGL(int w, int h) override;
 
         void readColorFile(const QString &filename);
-        void circle(float r, int subsec);
+        void initPattern();
         
         bool hasHeightForWidth() const override;
         int heightForWidth(int width) const override;
         
     private:
-        int dim;
+        int width;
+        int height;
+        int buffer;
+        QString colorfile;
+        QString fragfile;
+        int probability; // when generating texture, the probability that a given pixel is black
         
-        std::vector<QColor> gridColors;
-        static const int GRID_SIZE = 100;
-        bool grid[GRID_SIZE][GRID_SIZE] = {false};
-        //QOpenGLShaderProgram *program;
+        std::vector<QColor> gridColors; // color gradient values
+        rule alive;
+        rule dead;
+        int iterations; // counter for the number of iterations
+        float t_step; // the amount of time between iterations
+
+        QTimer timer;
+        QRandomGenerator* r_gen;
+        QOpenGLFramebufferObject* framebuffer[2];
+        //QOpenGLShaderProgram* shader;
 };
 
 #endif
