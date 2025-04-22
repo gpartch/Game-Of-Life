@@ -98,6 +98,7 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
         void gridTimeout();
         void gridPlay();
         void gridPause();
+        void gridRestart();
 
     signals:
         void viewerElapsedTime(QString time);

@@ -286,3 +286,14 @@ void Grid::setTextureProperties()
             glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,wrapping?GL_REPEAT:GL_CLAMP_TO_EDGE);
         }
 }
+
+void Grid::gridRestart()
+{
+    t = 0;
+    emit viewerElapsedTime("00:00");
+
+    iterations = 0;
+    emit viewerIterations("0");
+
+    update();
+}

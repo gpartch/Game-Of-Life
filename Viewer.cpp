@@ -38,6 +38,8 @@ Viewer::Viewer(QWidget *parent) : QMainWindow(parent)
         QLabel* frequency_label = new QLabel("Frequency(ms):");
         QLabel* frequency_num = new QLabel("--");
 
+        QPushButton* reset = new QPushButton("Reset");
+
         time_btn_group->addButton(play);
         time_btn_group->addButton(pause);
 
@@ -49,6 +51,7 @@ Viewer::Viewer(QWidget *parent) : QMainWindow(parent)
         time_lay->addWidget(iterations_num,2,1);
         time_lay->addWidget(frequency_label,3,0);
         time_lay->addWidget(frequency_num,3,1);
+        time_lay->addWidget(reset,4,0);
     time_box->setLayout(time_lay);
     layout->addWidget(time_box,0,0);
 
@@ -68,6 +71,7 @@ Viewer::Viewer(QWidget *parent) : QMainWindow(parent)
     // viewer signals
         connect(play, SIGNAL(clicked()), grid, SLOT(gridPlay()));
         connect(pause, SIGNAL(clicked()), grid, SLOT(gridPause()));
+        connect(reset, SIGNAL(clicked()), grid, SLOT(gridRestart()));
     // grid signals
         connect(grid, SIGNAL(viewerElapsedTime(QString)), elapsed_time, SLOT(setText(QString)));
         connect(grid, SIGNAL(viewerIterations(QString)), iterations_num, SLOT(setText(QString)));
