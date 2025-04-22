@@ -15,10 +15,10 @@ Grid::Grid(QWidget *parent) : QOpenGLWidget(parent)
     dead = {1,1,0,1,1,1,1,1};
 
     probability = 20;
-    t_step = 500;
+    t_step = 100;
     t = 0;
     iterations = 0;
-    wrapping = false;
+    wrapping = true;
 
     
 
@@ -69,42 +69,42 @@ void Grid::paintGL()
     glColor3f(1.0f, 1.0f, 1.0f); // Set color to white
     glViewport(0,0,width,height);
 
-    // if(iterations == 0)
-    // {
+    if(iterations == 0)
+    {
         glClear(GL_COLOR_BUFFER_BIT);
         glColor3f(1,1,1);
         // Initialize pattern
         initPattern();
-    // }
-    // else
-    // {
-    //     //  Enable shader
-    //     shader->bind();
-    //     //  Set offsets
-    //     float dX = 1.0/width;
-    //     float dY = 1.0/height;
-    //     shader->setUniformValue("dX",dX);
-    //     shader->setUniformValue("dY",dY);
-    //     shader->setUniformValue("img",0);
+    }
+    else
+    {
+        //  Enable shader
+        shader->bind();
+        //  Set offsets
+        float dX = 1.0/width;
+        float dY = 1.0/height;
+        shader->setUniformValue("dX",dX);
+        shader->setUniformValue("dY",dY);
+        shader->setUniformValue("img",0);
 
-    //     // Source framebuffer
-    //     glBindTexture(GL_TEXTURE_2D,framebuffer[out]->texture());
-    //     // glBindTexture(GL_TEXTURE_2D,framebuffer[1-out]->texture());
+        // Source framebuffer
+        //glBindTexture(GL_TEXTURE_2D,framebuffer[out]->texture());
+        glBindTexture(GL_TEXTURE_2D,framebuffer[1-out]->texture());
 
-    //     //  Compute generation
-    //     glClear(GL_COLOR_BUFFER_BIT);
-    //     glEnable(GL_TEXTURE_2D);
-    //     glBegin(GL_QUADS);
-    //     glTexCoord2f(0,0); glVertex2f(0,0);
-    //     glTexCoord2f(0,1); glVertex2f(0,height);
-    //     glTexCoord2f(1,1); glVertex2f(width,height);
-    //     glTexCoord2f(1,0); glVertex2f(width,0);
-    //     glEnd();
-    //     glDisable(GL_TEXTURE_2D);
+        //  Compute generation
+        glClear(GL_COLOR_BUFFER_BIT);
+        glEnable(GL_TEXTURE_2D);
+        glBegin(GL_QUADS);
+        glTexCoord2f(0,0); glVertex2f(0,0);
+        glTexCoord2f(0,1); glVertex2f(0,height);
+        glTexCoord2f(1,1); glVertex2f(width,height);
+        glTexCoord2f(1,0); glVertex2f(width,0);
+        glEnd();
+        glDisable(GL_TEXTURE_2D);
 
-    //     //  Done with shader
-    //     shader->release();
-    // }
+        //  Done with shader
+        shader->release();
+    }
 
     //  Blit to screen
     framebuffer[out]->release();
@@ -197,7 +197,7 @@ void Grid::initPattern()
 {
     makeCurrent();
     framebuffer[out]->bind();
-    
+
     for(int w=0; w<width; w++)
     {
         for(int h=0; h<height; h++)
