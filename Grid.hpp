@@ -15,6 +15,7 @@
 #include <QRandomGenerator>
 #include <QOpenGLFramebufferObject>
 #include <QTimer>
+#include <QtGlobal>
 
 using std::stoi;
 using std::vector;
@@ -43,6 +44,14 @@ using std::vector;
 
 // does the state persist or flip based on the number of neighbors, 0 if it flips, 1 if the state stays the same
 struct rule {int persist[8];};
+struct rgb_f 
+{
+    float r,g,b;
+    rgb_f(float nr, float ng, float nb)
+    {
+        r = nr; g = ng; b = nb;
+    }
+};
 
 #define Cos(x) (cos((x)*3.14159265/180))
 #define Sin(x) (sin((x)*3.14159265/180))
@@ -67,6 +76,7 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
         void initPattern();
         QString formatTime(int t);
         void setTextureProperties();
+        rgb_f calcColor();
         
         bool hasHeightForWidth() const override;
         int heightForWidth(int width) const override;
@@ -81,6 +91,8 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
         int probability; // when generating texture, the probability that a given pixel is black
         bool wrapping;
         int out; // output buffer
+        int color_step; // the number of iterations it takes to switch colors
+        int color_idx; // index of the current color being transitioned from
         
         std::vector<QColor> gridColors; // color gradient values
         rule alive;

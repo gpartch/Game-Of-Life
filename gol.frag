@@ -2,10 +2,15 @@ uniform float dX;
 uniform float dY;
 uniform sampler2D img;
 
-//  Get cell value (stored in r)
+uniform float red;
+uniform float green;
+uniform float blue;
+
+//  Get cell value
 float cell(float dx,float dy)
 {
-   return texture2D(img,gl_TexCoord[0].st+vec2(dx,dy)).r;
+   vec4 color = texture2D(img, gl_TexCoord[0].st + vec2(dx, dy));
+   return (color.r > 0.0 || color.g > 0.0 || color.b > 0.0) ? 1.0 : 0.0;
 }
 
 //  Evaluate cell
@@ -18,5 +23,7 @@ void main()
    //  Decide if the cell is alive on the next cycle
    float live = (Nnb==3.0 || cell(0.0,0.0)==1.0 && Nnb==2.0) ? 1.0 : 0.0;
    //  Set the color to red if live, black if not
-   gl_FragColor = vec4(live,0.0,0.0,1.0);
+   // gl_FragColor = vec4(live,0.0,0.0,1.0);
+   if(live) {gl_FragColor = vec4(red,green,blue,1.0);}
+   else {gl_FragColor = vec4(0.0,0.0,0.0,1.0);}
 }

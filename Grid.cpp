@@ -7,6 +7,8 @@ Grid::Grid(QWidget *parent) : QOpenGLWidget(parent)
     height = dim*devicePixelRatio();
     buffer = 25;
     out = 0;
+    color_step = 10;
+    color_idx = 0;
 
     colorfile = "../colors.txt";
     fragfile = "../gol.frag";
@@ -19,8 +21,6 @@ Grid::Grid(QWidget *parent) : QOpenGLWidget(parent)
     t = 0;
     iterations = 0;
     wrapping = true;
-
-    
 
     // set timer properties
     timer.setTimerType(Qt::PreciseTimer);
@@ -66,14 +66,18 @@ void Grid::paintGL()
     }
 
     glClear(GL_COLOR_BUFFER_BIT);
-    glColor3f(1.0f, 1.0f, 1.0f); // Set color to white
+    rgb_f color = calcColor();
+    //qDebug() << "Red:" << color.r << "Green:" << color.g << "Blue:" << color.b;
+    //glColor3f(color.r, color.g, color.b);
+    //glColor3f(1,1,1);
     glViewport(0,0,width,height);
+
+    // qInfo() << "Color =" << color.r << color.b << color.g;
 
     if(iterations == 0)
     {
         glClear(GL_COLOR_BUFFER_BIT);
-        glColor3f(1,1,1);
-        // Initialize pattern
+        glColor3f(1.0,1.0,1.0);
         initPattern();
     }
     else
@@ -87,8 +91,11 @@ void Grid::paintGL()
         shader->setUniformValue("dY",dY);
         shader->setUniformValue("img",0);
 
+        shader->setUniformValue("red",color.r);
+        shader->setUniformValue("green",color.g);
+        shader->setUniformValue("blue",color.b);
+
         // Source framebuffer
-        //glBindTexture(GL_TEXTURE_2D,framebuffer[out]->texture());
         glBindTexture(GL_TEXTURE_2D,framebuffer[1-out]->texture());
 
         //  Compute generation
@@ -180,10 +187,11 @@ void Grid::readColorFile(const QString &filename)
             // remove the # symbol
             line.removeFirst();
             // parse into RR GG BB
-            int r = line.mid(0,2).toInt();
-            int g = line.mid(2,2).toInt();
-            int b = line.mid(4,2).toInt();
+            int r = line.mid(0,2).toInt(nullptr, 16);
+            int g = line.mid(2,2).toInt(nullptr, 16);
+            int b = line.mid(4,2).toInt(nullptr, 16);
 
+            //qInfo() << "Adding color" << r << g << b;
             gridColors.push_back(QColor(r, g, b));
         }
         else
@@ -216,20 +224,6 @@ void Grid::initPattern()
             }
         }
     }
-
-    // test square
-    // int size = 50;
-    // glBegin(GL_QUADS);
-    //     glVertex2f(0,0);
-    //     glVertex2f(size,0);
-    //     glVertex2f(size,size);
-    //     glVertex2f(0,size);
-
-    //     glVertex2f(width,height);
-    //     glVertex2f(width-size,height);
-    //     glVertex2f(width-size,height-size);
-    //     glVertex2f(width,height-size);
-    // glEnd();
 }
 
 bool Grid::hasHeightForWidth() const
@@ -297,3 +291,47 @@ void Grid::gridRestart()
 
     update();
 }
+
+rgb_f Grid::calcColor()
+{
+    if(iterations % color_step == 0 && iterations != 0) color_idx = (color_idx + 1) % gridColors.size();
+
+    //qInfo() << "----------------------";
+
+    // get current color and color being transitioned to
+    QColor c1 = gridColors.at(color_idx);
+    QColor c2 = gridColors.at((color_idx + 1)% gridColors.size());
+
+    //qInfo() << "Init Color:" << c1.redF() << c1.greenF() << c1.blueF();
+    //qInfo() << "generation:" << iterations%color_step;
+
+    // get the degree of transition
+    int d = iterations % color_step;
+
+    //qInfo() << "d:" << d;
+
+    // get the differences between red, green, and blue values
+    float r_diff = c2.redF() - c1.redF();
+    float g_diff = c2.greenF() - c1.greenF();
+    float b_diff = c2.blueF() - c1.blueF();
+
+    //qInfo() << "diff:" << r_diff << g_diff << b_diff;
+
+    // get the change in color value per step
+    float dr = r_diff/color_step;
+    float dg = g_diff/color_step;
+    float db = b_diff/color_step;
+
+    //qInfo() << "dc:" << dr << dg << db;
+
+    // calculate color components
+    float red = c1.redF() + dr * d;
+    float green = c1.greenF() + dg * d;
+    float blue = c1.blueF() + db * d;
+
+    //qInfo() << "Color:" << red << green << blue;
+
+    // assemble current color
+    return rgb_f(qBound(0.0f,red,1.0f),qBound(0.0f,green,1.0f),qBound(0.0f,blue,1.0f));
+}
+
