@@ -66,17 +66,21 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
         void readColorFile(const QString &filename);
         void initPattern();
         QString formatTime(int t);
+        void setTextureProperties();
         
         bool hasHeightForWidth() const override;
         int heightForWidth(int width) const override;
         
     private:
+    int dim;
         int width;
         int height;
         int buffer;
         QString colorfile;
         QString fragfile;
         int probability; // when generating texture, the probability that a given pixel is black
+        bool wrapping;
+        int out; // output buffer
         
         std::vector<QColor> gridColors; // color gradient values
         rule alive;
@@ -88,7 +92,7 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
         QTimer timer;
         QRandomGenerator* r_gen;
         QOpenGLFramebufferObject* framebuffer[2];
-        //QOpenGLShaderProgram* shader;
+        QOpenGLShaderProgram* shader;
 
     public slots:
         void gridTimeout();
@@ -97,6 +101,8 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
 
     signals:
         void viewerElapsedTime(QString time);
+        void viewerIterations(QString iterations);
+        void viewerFrequency(QString frequency);
 };
 
 #endif
