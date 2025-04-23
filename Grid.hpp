@@ -16,6 +16,7 @@
 #include <QOpenGLFramebufferObject>
 #include <QTimer>
 #include <QtGlobal>
+#include <QMouseEvent>
 
 using std::stoi;
 using std::vector;
@@ -77,6 +78,11 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
         QString formatTime(int t);
         void setTextureProperties();
         rgb_f calcColor();
+
+        void mousePressEvent(QMouseEvent* e) override;
+        void mouseReleaseEvent(QMouseEvent*) override;           //  Mouse released
+        void mouseMoveEvent(QMouseEvent*) override;              //  Mouse moved
+        void wheelEvent(QWheelEvent*) override;                  //  Mouse wheel
         
         bool hasHeightForWidth() const override;
         int heightForWidth(int width) const override;
@@ -85,26 +91,34 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
     int dim;
         int width;
         int height;
-        int buffer;
-        QString colorfile;
-        QString fragfile;
-        int probability; // when generating texture, the probability that a given pixel is black
-        bool wrapping;
-        int out; // output buffer
-        int color_step; // the number of iterations it takes to switch colors
-        int color_idx; // index of the current color being transitioned from
+        int border; // border around gol window
+
+        QPoint user_pos; // user position
+        QPoint mouse_pos; // mouse position
+        float zoom; // window zoom
+        bool mouse_click; // on when mouse button is clicked
         
-        std::vector<QColor> gridColors; // color gradient values
+        QString fragfile;
+        bool wrapping;
+        int probability; // when generating texture, the probability that a given pixel is black
+        int out; // output buffer
+        int iterations; // counter for the number of iterations
         rule alive;
         rule dead;
-        int iterations; // counter for the number of iterations
-        float t_step; // the amount of time between iterations in milliseconds
-        int t; // time in milliseconds
-
-        QTimer timer;
         QRandomGenerator* r_gen;
         QOpenGLFramebufferObject* framebuffer[2];
         QOpenGLShaderProgram* shader;
+        
+        QString colorfile;
+        std::vector<QColor> gridColors; // color gradient values
+        int color_step; // the number of iterations it takes to switch colors
+        int color_idx; // index of the current color being transitioned from
+        
+        int t_step; // the amount of time between iterations in milliseconds
+        int t; // time in milliseconds
+        QTimer timer;
+
+        bool skip_iteration;
 
     public slots:
         void gridTimeout();
@@ -116,6 +130,9 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
         void viewerElapsedTime(QString time);
         void viewerIterations(QString iterations);
         void viewerFrequency(QString frequency);
+
+    protected:
+        
 };
 
 #endif
