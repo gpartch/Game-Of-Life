@@ -11,8 +11,8 @@ Grid::Grid(QWidget *parent) : QOpenGLWidget(parent)
     color_idx = 0;
 
     zoom = 1;
-    user_pos.setX(width/2);
-    user_pos.setY(height/2);
+    user_pos.setX(.5);
+    user_pos.setY(.5);
 
     colorfile = "../colors.txt";
     fragfile = "../gol.frag";
@@ -20,7 +20,7 @@ Grid::Grid(QWidget *parent) : QOpenGLWidget(parent)
     alive = {0,1,1,0,0,0,0,0};
     dead = {1,1,0,1,1,1,1,1};
 
-    probability = 20;
+    probability = 30;
     t_step = 100;
     t = 0;
     iterations = 0;
@@ -77,7 +77,7 @@ void Grid::paintGL()
         rgb_f color = calcColor();
 
         if(iterations == 0)
-        {
+        { 
             glClear(GL_COLOR_BUFFER_BIT);
             glColor3f(1.0,1.0,1.0);
             initPattern();
@@ -110,7 +110,6 @@ void Grid::paintGL()
             glTexCoord2f(1,0); glVertex2f(width,0);
             glEnd();
             glDisable(GL_TEXTURE_2D);
-            //calcTexCoords();
 
             //  Done with shader
             shader->release();
@@ -123,22 +122,33 @@ void Grid::paintGL()
         if(t == 0) {iterations = 0; emit viewerIterations(QString::number(iterations));}
     }
 
-    double left = qMax(0.0, 0.5 - zoom / 2.0);
-    double right = qMin(1.0, 0.5 + zoom / 2.0);
-    double bottom = qMax(0.0, 0.5 - zoom / 2.0);
-    double top = qMin(1.0, 0.5 + zoom / 2.0);
-    
+    double left = qBound(0.0, (0.5 - zoom / 2.0) + user_pos.x(), 1.0 - zoom);
+    double right = qBound(zoom, (0.5 + zoom / 2.0) + user_pos.x(), 1.0);
+    double bottom = qBound(0.0, (0.5 - zoom / 2.0) + user_pos.y(), 1.0 - zoom);
+    double top = qBound(zoom, (0.5 + zoom / 2.0) + user_pos.y(), 1.0);
+
+    // using brute force, make sure the texture box stays square
+    // if(left == 0 && right != 1) right = left + zoom;
+    // else if (right == 1 && left != 0) left = right - zoom;
+
+    // if(bottom == 0 && top != 1) top = bottom + zoom;
+    // else if (top == 1 && bottom != 0) bottom = top - zoom;
+
+    // qInfo() << "-------------------";
     // qInfo() << "left:" << left << "right:" << right << "bottom:" << bottom << "top:" << top;
+    // qInfo() << "right-left:" << right-left << "top-bottom:" << top-bottom;
+    // qInfo() << "zoom:" << zoom;
+
     //  Print to screen
     int texture = framebuffer[out]->texture();
     glBindTexture(GL_TEXTURE_2D,texture);
     glClear(GL_COLOR_BUFFER_BIT);
     glEnable(GL_TEXTURE_2D);
     glBegin(GL_QUADS);
-    glTexCoord2f(left,bottom); glVertex2f(0,0);
-    glTexCoord2f(left,top); glVertex2f(0,height);
-    glTexCoord2f(right,top); glVertex2f(width,height);
-    glTexCoord2f(right,bottom); glVertex2f(width,0);
+    glTexCoord2f(left,bottom); glVertex2f(0+border,0+border);
+    glTexCoord2f(left,top); glVertex2f(0+border,height-border);
+    glTexCoord2f(right,top); glVertex2f(width-border,height-border);
+    glTexCoord2f(right,bottom); glVertex2f(width-border,0+border);
     glEnd();
     glDisable(GL_TEXTURE_2D);
 
@@ -172,6 +182,8 @@ void Grid::resizeGL(int w, int h)
 
     t = 0;
     emit viewerElapsedTime("00:00");
+
+    //qInfo() << "width:" << width << "height:" << height;
 
     skip_iteration = false;
     update();
@@ -327,24 +339,50 @@ rgb_f Grid::calcColor()
 void Grid::mousePressEvent(QMouseEvent* event)
 {
     //qInfo() << "event:" << event->x() << event->y();
-   mouse_click = true;
-   mouse_pos = event->pos(); //  Remember mouse location
+    if (event->button() == Qt::LeftButton)
+    {
+        mouse_click = true;
+        mouse_pos = event->pos();
+    }
+    //  Remember mouse location
 }
 void Grid::mouseReleaseEvent(QMouseEvent* event)
 {
-    mouse_click = false;
+    if (event->button() == Qt::LeftButton) mouse_click = false;
 }
 void Grid::mouseMoveEvent(QMouseEvent* event)
 {
-    // only pan when button is clicked
-    if(mouse_click == true)
-    {
-        // calculate change in mouse location
+    // Only pan when the left mouse button is clicked
+    if (mouse_click) {
+        // Calculate the change in mouse position
         QPoint diff = event->pos() - mouse_pos;
         mouse_pos = event->pos();
+
+        // Adjust user_pos based on the mouse movement and zoom level
+        user_pos.rx() -= diff.x() / (double)width * zoom;
+        user_pos.ry() += diff.y() / (double)height * zoom;
+
+        // Adjust clamping range based on zoom and aspect ratio
+        double aspect = (double)width / height;
+        double zoomX = zoom;
+        double zoomY = zoom;
+        if (aspect > 1.0) {
+            zoomY /= aspect;
+        } else {
+            zoomX *= aspect;
+        }
+
+        // Clamp user_pos to ensure the visible area stays within bounds
+        user_pos.setX(qBound(zoomX / 2.0 - 0.5, user_pos.x(), 0.5 - zoomX / 2.0));
+        user_pos.setY(qBound(zoomY / 2.0 - 0.5, user_pos.y(), 0.5 - zoomY / 2.0));
+
+        // Trigger a redraw
+        skip_iteration = true;
+        
+        //update();
+        repaint();
     }
-    skip_iteration = true;
-    update();
+    
 }
 void Grid::wheelEvent(QWheelEvent* event)
 {

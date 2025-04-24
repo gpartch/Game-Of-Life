@@ -93,7 +93,7 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
         int height;
         int border; // border around gol window
 
-        QPoint user_pos; // user position
+        QPointF user_pos; // user position
         QPoint mouse_pos; // mouse position
         float zoom; // window zoom
         bool mouse_click; // on when mouse button is clicked

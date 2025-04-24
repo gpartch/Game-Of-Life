@@ -20,9 +20,9 @@ Viewer::Viewer(QWidget *parent) : QMainWindow(parent)
     QGridLayout* layout = new QGridLayout(menu_widget);
     layout->setRowStretch(10,100);
 
-    // Time box
+    // Counter box
     QGridLayout* time_lay = new QGridLayout();
-    QGroupBox* time_box = new QGroupBox("Time");
+    QGroupBox* time_box = new QGroupBox("Counter");
     QButtonGroup* time_btn_group = new QButtonGroup();
     time_btn_group->setExclusive(true);
         QPushButton* play = new QPushButton("Play");
