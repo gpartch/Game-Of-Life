@@ -9,16 +9,15 @@ Grid::Grid(QWidget *parent) : QOpenGLWidget(parent)
     out = 0;
     color_step = 10;
     color_idx = 0;
+    selected_pattern = -1;
+    patterns_dir = "../patterns";
 
     zoom = 1;
-    user_pos.setX(.5);
-    user_pos.setY(.5);
+    user_pos.setX(0);
+    user_pos.setY(0);
 
     colorfile = "../colors.txt";
     fragfile = "../gol.frag";
-
-    alive = {0,1,1,0,0,0,0,0};
-    dead = {1,1,0,1,1,1,1,1};
 
     probability = 30;
     t_step = 100;
@@ -40,6 +39,8 @@ Grid::Grid(QWidget *parent) : QOpenGLWidget(parent)
     setSizePolicy(QSizePolicy::Minimum,QSizePolicy::Minimum);
 
     readColorFile(colorfile);
+
+    loadPattern("../patterns/spacefillersynthactivation.rle");
 }
 Grid::~Grid() {}
 QSize Grid::sizeHint() const
@@ -188,7 +189,7 @@ void Grid::resizeGL(int w, int h)
     skip_iteration = false;
     update();
 }
-void Grid::readColorFile(const QString &filename)
+void Grid::readColorFile(const QString filename)
 {
     QFile file(filename);
     if (!file.open(QIODeviceBase::ReadOnly, QFileDevice::ReadUser)) {
@@ -224,21 +225,55 @@ void Grid::initPattern()
     makeCurrent();
     framebuffer[out]->bind();
 
-    for(int w=0; w<width; w++)
+    // no selected pattern, randomize grid
+    if (selected_pattern == -1)
     {
-        for(int h=0; h<height; h++)
+        for (int w = 0; w < width; w++)
         {
-            if(r_gen->bounded(100) <= probability)
+            for (int h = 0; h < height; h++)
             {
-                // GLubyte dot[] = {0xFF};
-                // glRasterPos2i(w, height - h);
-                // glBitmap(1,1,0,0,0,0,dot);
-                glBegin(GL_QUADS);
-                    glVertex2f(w,h);
-                    glVertex2f(w+1,h);
-                    glVertex2f(w+1,h+1);
-                    glVertex2f(w,h+1);
-                glEnd();
+                if (r_gen->bounded(100) <= probability)
+                {
+                    glBegin(GL_QUADS);
+                        glVertex2f(w, h);
+                        glVertex2f(w + 1, h);
+                        glVertex2f(w + 1, h + 1);
+                        glVertex2f(w, h + 1);
+                    glEnd();
+                }
+            }
+        }
+    }
+    // draw RLE pattern
+    else
+    {
+        // retrieve pattern information
+        vector<vector<bool>> pattern_grid = patterns.at(selected_pattern).pattern_grid;
+        int p_dx = patterns.at(selected_pattern).dx;
+        int p_dy = patterns.at(selected_pattern).dy;
+
+        // determine where to start on the grid + how wide the pattern can be
+        int start_col = qBound(0, width / 2 - p_dx / 2, width);
+        int start_row = qBound(0, height / 2 - p_dy / 2, height);
+        int dx = qMin(p_dx, width - start_col);
+        int dy = qMin(p_dy, height - start_row);
+
+        //qInfo() << "drawing pattern";
+        // draw pattern
+        for (int r = 0; r < dy; r++)
+        {
+            for (int c = 0; c < dx; c++)
+            {
+                // Access the transposed grid: swap row and column
+                if (pattern_grid.at(r).at(c) == true)
+                {
+                    glBegin(GL_QUADS);
+                        glVertex2f(start_col + c, start_row + r);
+                        glVertex2f(start_col + c + 1, start_row + r);
+                        glVertex2f(start_col + c + 1, start_row + r + 1);
+                        glVertex2f(start_col + c, start_row + r + 1);
+                    glEnd();
+                }
             }
         }
     }
@@ -341,19 +376,19 @@ void Grid::mousePressEvent(QMouseEvent* event)
     //qInfo() << "event:" << event->x() << event->y();
     if (event->button() == Qt::LeftButton)
     {
-        mouse_click = true;
+        L_click = true;
         mouse_pos = event->pos();
     }
     //  Remember mouse location
 }
 void Grid::mouseReleaseEvent(QMouseEvent* event)
 {
-    if (event->button() == Qt::LeftButton) mouse_click = false;
+    if (event->button() == Qt::LeftButton) L_click = false;
 }
 void Grid::mouseMoveEvent(QMouseEvent* event)
 {
     // Only pan when the left mouse button is clicked
-    if (mouse_click) {
+    if (L_click) {
         // Calculate the change in mouse position
         QPoint diff = event->pos() - mouse_pos;
         mouse_pos = event->pos();
@@ -395,4 +430,143 @@ void Grid::wheelEvent(QWheelEvent* event)
     else if(zoom < .1) zoom = .1;
     skip_iteration = true;
     update();
+}
+void Grid::loadPattern(QString filename)
+{
+    qInfo() << "loading pattern" << filename;
+    pattern new_pattern;
+    QString pattern_string;
+
+    if(!filename.contains(".rle"))
+    {
+        qInfo("Other file types not supported, must be a .rle file");
+        return;
+    }
+    else loadRLE(filename, new_pattern);
+
+    pattern_string = loadRLE(filename, new_pattern);
+
+    if(pattern_string == "") qInfo() << "Failed to load pattern" << filename;
+    else
+    {
+        //new_pattern.pattern_grid.resize(new_pattern.dy);
+        parseRLEString(pattern_string, new_pattern);
+        patterns.push_back(new_pattern);
+    }
+}
+QString Grid::loadRLE(QString filename, pattern& p)
+{
+    //  Open file
+    QFile file(filename);
+    if (!file.open(QIODevice::ReadOnly))
+    {
+        qInfo() << "Cannot open file "+filename;
+        return "";
+    }
+    QTextStream in(&file);
+    QString line = in.readLine();
+    //  Skip header
+    while (line[0] == '#')
+    {
+        if (line[1] == 'N') p.name = line.mid(3);
+        line = in.readLine();
+    }
+    if (p.name.isEmpty()) p.name = "unnamed";
+    //  Process header line
+    line = line.simplified();
+    line.replace(" ","");
+    QStringList words = line.split(",");
+    if (words.length()<3) qInfo() << "Invalid header line "+line;
+    else if (!words[0].startsWith("x=")) qInfo() << "Missing x= "+line;
+    else if (!words[1].startsWith("y=")) qInfo() << "Missing y= "+line;
+    else if (!words[2].startsWith("rule=")) qInfo() << "Missing rule= "+line;
+    else if (words[2].mid(5) != "B3/S23" && words[2].mid(5) != "b3/s23") qInfo() << "Only rule B3/S23 implemented, "+words[2].mid(5)+" not supported.";
+    else
+    {
+        p.dx = words[0].mid(2).toInt();
+        p.dy = words[1].mid(2).toInt();
+        if(p.dx <= 0 || p.dy <= 0) qFatal(qPrintable(QString("Invalid pattern x or y value(s),(x,y): %1, %2").arg(p.dx).arg(p.dy)));
+        //  Read pattern
+        QString pattern_string = "";
+        while (!in.atEnd())
+        {
+            pattern_string += in.readLine();
+        }
+        //  Remove whitespace
+        pattern_string = pattern_string.simplified();
+        pattern_string.replace(" ", "");
+        //  Reset simulation
+        return pattern_string;
+    }
+    return "";
+}
+void Grid::parseRLEString(QString rle, pattern &p)
+{
+    QQueue<bool> queue;
+    QString str_count;
+    int rle_len = rle.length();
+    for(int i=0; i<rle_len; i++)
+    {
+        char c = rle[i].unicode();
+        int count = str_count.toInt();
+        int diff = ((p.dx*p.dy)- queue.size()) % p.dx;
+        switch(c)
+        {
+            // dead
+            case 'b': 
+            {
+
+                if(count == 0) count = 1;
+                for(int j=0; j<count; j++) {queue.append(0);}
+                str_count.clear();
+                break;
+            }
+            // alive
+            case 'o': 
+            {
+                if(count == 0) count = 1;
+                for(int j=0; j<count; j++) {queue.append(1);} 
+                str_count.clear();
+                break;
+            }
+            // new line
+            case '$': 
+            {
+                // pad with 0s if necessary to get a full row
+                if(diff != 0) for(int j=0; j<diff; j++) {queue.append(0);}
+                // need to add extra lines of 0s
+                if(count != 0)
+                {
+                    // adjust for rle notation, eg 2$ is just one extra line of 0s, not 2
+                    count--;
+                    for (int j=0; j<count; j++) {for(int k=0; k<p.dx; k++) {queue.append(0);}}
+                }
+                str_count.clear();
+                break;
+            }
+            // end of rle
+            case '!':
+            {
+                // pad with 0s to get a full row
+                if(diff != 0) for(int j=0; j<diff; j++) {queue.append(0);}
+                break;
+            }
+            default: str_count.append(c);
+        }
+    }
+
+    if(queue.size() % p.dx != 0) qFatal("invalid number of elements in queue!");
+    else
+    {
+        p.pattern_grid.resize(p.dy);
+        for(int i=0; i<p.dy; i++)
+        {
+            for(int j=0; j<p.dx; j++)
+            {
+                bool e = queue.dequeue();
+                //e == 0 ? std::cout<<"0" : std::cout<<"1";
+                p.pattern_grid.at(i).push_back(e);
+            }
+        }
+    }
 }

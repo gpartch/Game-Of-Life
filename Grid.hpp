@@ -17,6 +17,8 @@
 #include <QTimer>
 #include <QtGlobal>
 #include <QMouseEvent>
+#include <QTextStream>
+#include <QQueue>
 
 using std::stoi;
 using std::vector;
@@ -44,7 +46,7 @@ using std::vector;
 */
 
 // does the state persist or flip based on the number of neighbors, 0 if it flips, 1 if the state stays the same
-struct rule {int persist[8];};
+//struct rule {int persist[8];};
 struct rgb_f 
 {
     float r,g,b;
@@ -52,6 +54,14 @@ struct rgb_f
     {
         r = nr; g = ng; b = nb;
     }
+};
+struct pattern
+{
+    QString name;
+    QString rule;
+    int dx,dy;
+    vector<vector<bool>> pattern_grid;
+    pattern() {dx = 0; dy = 0;}
 };
 
 #define Cos(x) (cos((x)*3.14159265/180))
@@ -73,11 +83,16 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
         void paintGL() override;
         void resizeGL(int w, int h) override;
 
-        void readColorFile(const QString &filename);
+        void readColorFile(const QString filename);
         void initPattern();
         QString formatTime(int t);
         void setTextureProperties();
         rgb_f calcColor();
+        void loadPattern(QString filename);
+        QString loadRLE(QString filename, pattern& p);
+        void parseRLEString(QString rle, pattern &p);
+        void initPatterns();
+
 
         void mousePressEvent(QMouseEvent* e) override;
         void mouseReleaseEvent(QMouseEvent*) override;           //  Mouse released
@@ -89,36 +104,42 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
         
     private:
     int dim;
+        // window
         int width;
         int height;
         int border; // border around gol window
 
-        QPointF user_pos; // user position
-        QPoint mouse_pos; // mouse position
-        float zoom; // window zoom
-        bool mouse_click; // on when mouse button is clicked
+        // user interactivity 
+        QPointF user_pos; // user position in terms of texture coordinates, eg 0-1 in x and y directions
+        QPoint mouse_pos; // mouse position on window in screen coordinates, eg pixels
+        float zoom; // window zoom, 1-.1,, also represents the length and width of the bounding box in texture coordinates
+        bool L_click; // on when left mouse button is clicked
         
+        // state management / other
         QString fragfile;
         bool wrapping;
         int probability; // when generating texture, the probability that a given pixel is black
         int out; // output buffer
         int iterations; // counter for the number of iterations
-        rule alive;
-        rule dead;
+        bool skip_iteration;
+        int selected_pattern;
         QRandomGenerator* r_gen;
         QOpenGLFramebufferObject* framebuffer[2];
         QOpenGLShaderProgram* shader;
+        vector<pattern> patterns;
+        QString patterns_dir;
         
+        // color
         QString colorfile;
         std::vector<QColor> gridColors; // color gradient values
         int color_step; // the number of iterations it takes to switch colors
         int color_idx; // index of the current color being transitioned from
         
+        // time
         int t_step; // the amount of time between iterations in milliseconds
         int t; // time in milliseconds
         QTimer timer;
-
-        bool skip_iteration;
+        
 
     public slots:
         void gridTimeout();
