@@ -10,6 +10,8 @@
 #include <QLabel>
 #include <QButtonGroup>
 #include <QPushButton>
+#include <QComboBox>
+#include <QDoubleSpinBox>
 
 #include "Grid.hpp"
 
@@ -22,7 +24,10 @@ class Viewer: public QMainWindow
         Viewer(QWidget *parent = nullptr);
         ~Viewer();
     private:
+        QComboBox* patterns = nullptr;
         
+    private slots:
+        void viewerAddPattern(QString);
 };
 
 #endif

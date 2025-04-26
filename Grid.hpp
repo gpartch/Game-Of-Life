@@ -19,6 +19,8 @@
 #include <QMouseEvent>
 #include <QTextStream>
 #include <QQueue>
+#include <QDir>
+#include <QWindow>
 
 using std::stoi;
 using std::vector;
@@ -84,13 +86,13 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
         void resizeGL(int w, int h) override;
 
         void readColorFile(const QString filename);
-        void initPattern();
+        void initGrid();
         QString formatTime(int t);
         void setTextureProperties();
         rgb_f calcColor();
-        void loadPattern(QString filename);
+        QString loadPattern(QString filename);
         QString loadRLE(QString filename, pattern& p);
-        void parseRLEString(QString rle, pattern &p);
+        bool parseRLEString(QString rle, pattern &p);
         void initPatterns();
 
 
@@ -103,8 +105,8 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
         int heightForWidth(int width) const override;
         
     private:
-    int dim;
         // window
+        int dim;
         int width;
         int height;
         int border; // border around gol window
@@ -128,6 +130,7 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
         QOpenGLShaderProgram* shader;
         vector<pattern> patterns;
         QString patterns_dir;
+        int unnamed_pattern_ctr;
         
         // color
         QString colorfile;
@@ -138,19 +141,24 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
         // time
         int t_step; // the amount of time between iterations in milliseconds
         int t; // time in milliseconds
-        QTimer timer;
+        QTimer timer; // track time
+        QTimer iter_timer; // track iterations interval
         
 
     public slots:
-        void gridTimeout();
+        void clockTimeout();
+        void iterationTimeout();
         void gridPlay();
         void gridPause();
         void gridRestart();
+        void gridLoadPattern(int);
+        void gridSetFrequency(double);
 
     signals:
         void viewerElapsedTime(QString time);
         void viewerIterations(QString iterations);
         void viewerFrequency(QString frequency);
+        void viewerAddPattern(QString);
 
     protected:
         
