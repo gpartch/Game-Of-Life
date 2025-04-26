@@ -32,10 +32,15 @@ void main()
    float live = (Nnb==3.0 || cell(0.0,0.0)==1.0 && Nnb==2.0) ? 1.0 : 0.0;
    //  Set the color to red if live, black if not
 
+   if(!live) {gl_FragColor = vec4(0.0,0.0,0.0,1.0);}
+   else if (live && cell(0,0)) {gl_FragColor = color();}
+   else {gl_FragColor = vec4(red,green,blue,1.0);}
+
+
    // if alive and stays alive preserve color
-   if(live && cell(0,0)) {gl_FragColor = color();}
+   //if(live && cell(0,0)) {gl_FragColor = color();}
    // if dead and becomes alive use new color
-   else if(live) {gl_FragColor = vec4(red,green,blue,1.0);}
+   //else if(live) {gl_FragColor = vec4(red,green,blue,1.0);}
    // else stay black
-   else {gl_FragColor = vec4(0.0,0.0,0.0,1.0);}
+   //else {gl_FragColor = vec4(0.0,0.0,0.0,1.0);}
 }
