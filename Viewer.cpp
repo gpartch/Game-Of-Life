@@ -3,7 +3,6 @@
 Viewer::Viewer(QWidget *parent) : QMainWindow(parent)
 {
     setWindowTitle(tr("Game Of Life"));
-    //setWindowFlags(Qt::Window | Qt::MSWindowsFixedSizeDialogHint);
 
     // Create dock widget
     QDockWidget* menu = new QDockWidget(this);
@@ -13,7 +12,6 @@ Viewer::Viewer(QWidget *parent) : QMainWindow(parent)
         QWidget* menu_widget = new QWidget(menu);
         //menu_widget->setFixedWidth()
         menu->setWidget(menu_widget);
-        
 
     // Set dock widget menu layout
     QGridLayout* layout = new QGridLayout(menu_widget);
@@ -40,7 +38,6 @@ Viewer::Viewer(QWidget *parent) : QMainWindow(parent)
         QLabel* iterations_num = new QLabel("0");
 
         QLabel* frequency_label = new QLabel("Frequency(ms):");
-        //QLabel* frequency_num = new QLabel("--");
         QDoubleSpinBox* frequency_num = new QDoubleSpinBox(time_box);
         frequency_num->setMinimum(10);
         frequency_num->setMaximum(10000);
@@ -66,16 +63,15 @@ Viewer::Viewer(QWidget *parent) : QMainWindow(parent)
     layout->addWidget(time_box,0,0);
 
     // viewer signals
-    connect(play,       SIGNAL(clicked()),                      grid,               SLOT(gridPlay()));
-    connect(pause,      SIGNAL(clicked()),                      grid,               SLOT(gridPause()));
-    connect(reset,      SIGNAL(clicked()),                      grid,               SLOT(gridRestart()));
+    connect(play,           SIGNAL(clicked()),                      grid,               SLOT(gridPlay()));
+    connect(pause,          SIGNAL(clicked()),                      grid,               SLOT(gridPause()));
+    connect(reset,          SIGNAL(clicked()),                      grid,               SLOT(gridRestart()));
     
     // grid signals
-    connect(grid,       SIGNAL(viewerElapsedTime(QString)),     elapsed_time,       SLOT(setText(QString)));
-    connect(grid,       SIGNAL(viewerIterations(QString)),      iterations_num,     SLOT(setText(QString)));
-    //connect(grid,       SIGNAL(viewerFrequency(QString)),       frequency_num,      SLOT(setText(QString)));
-    connect(grid,       SIGNAL(viewerAddPattern(QString)),      this,               SLOT(viewerAddPattern(QString)));
-    connect(frequency_num, SIGNAL(valueChanged(double)), grid, SLOT(gridSetFrequency(double)));
+    connect(grid,           SIGNAL(viewerElapsedTime(QString)),     elapsed_time,       SLOT(setText(QString)));
+    connect(grid,           SIGNAL(viewerIterations(QString)),      iterations_num,     SLOT(setText(QString)));
+    connect(grid,           SIGNAL(viewerAddPattern(QString)),      this,               SLOT(viewerAddPattern(QString)));
+    connect(frequency_num,  SIGNAL(valueChanged(double)),           grid,               SLOT(gridSetFrequency(double)));
 
     // Patterns Box
     patterns = new QComboBox(menu_widget);
@@ -96,19 +92,12 @@ Viewer::Viewer(QWidget *parent) : QMainWindow(parent)
 
     // Resize the main window to fit the grid and menu dock
     resize(totalWidth, totalHeight);
-
-
-    
 }
 
-Viewer::~Viewer()
-{
-    //delete *grid;
-}
+Viewer::~Viewer() {}
 
 void Viewer::viewerAddPattern(QString pattern)
 {
     int idx = patterns->count();
-    if(pattern != "") {patterns->insertItem(idx+1,pattern); qInfo() << "adding new pattern" << pattern;}
-    //update();
+    if(pattern != "") {patterns->insertItem(idx+1,pattern);}
 }

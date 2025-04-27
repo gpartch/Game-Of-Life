@@ -35,14 +35,6 @@ struct rgb_f
         r = nr; g = ng; b = nb;
     }
 };
-struct pattern
-{
-    QString name;
-    QString rule;
-    int dx,dy;
-    vector<vector<bool>> pattern_grid;
-    pattern() {dx = 0; dy = 0;}
-};
 
 #define Cos(x) (cos((x)*3.14159265/180))
 #define Sin(x) (sin((x)*3.14159265/180))
@@ -105,7 +97,6 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
         vector<Pattern*> patterns;
         QString patterns_dir;
         int unnamed_pattern_ctr;
-        QOpenGLContext* ctxt;
         
         // color
         QString colorfile;
@@ -118,7 +109,6 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
         int t; // time in milliseconds
         QTimer timer; // track time
         QTimer iter_timer; // track iterations interval
-        
 
     public slots:
         void clockTimeout();

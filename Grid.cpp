@@ -72,9 +72,6 @@ void Grid::initializeGL()
     //  Link
     if (!shader->link())
         qFatal() << "Error linking shader\n"+shader->log();
-
-    // record context
-    ctxt = context();
 }
 void Grid::paintGL()
 {
@@ -143,18 +140,6 @@ void Grid::paintGL()
     double bottom = qBound(0.0, (0.5 - zoom / 2.0) + user_pos.y(), 1.0 - zoom);
     double top = qBound(zoom, (0.5 + zoom / 2.0) + user_pos.y(), 1.0);
 
-    // using brute force, make sure the texture box stays square
-    // if(left == 0 && right != 1) right = left + zoom;
-    // else if (right == 1 && left != 0) left = right - zoom;
-
-    // if(bottom == 0 && top != 1) top = bottom + zoom;
-    // else if (top == 1 && bottom != 0) bottom = top - zoom;
-
-    // qInfo() << "-------------------";
-    // qInfo() << "left:" << left << "right:" << right << "bottom:" << bottom << "top:" << top;
-    // qInfo() << "right-left:" << right-left << "top-bottom:" << top-bottom;
-    // qInfo() << "zoom:" << zoom;
-
     //  Print to screen
     int texture = framebuffer[out]->texture();
     glBindTexture(GL_TEXTURE_2D,texture);
@@ -199,8 +184,6 @@ void Grid::resizeGL(int w, int h)
     t = 0;
     emit viewerElapsedTime("00:00");
 
-    //qInfo() << "width:" << width << "height:" << height;
-
     skip_iteration = false;
     update();
 }
@@ -227,7 +210,6 @@ void Grid::readColorFile(const QString filename)
             int g = line.mid(2,2).toInt(nullptr, 16);
             int b = line.mid(4,2).toInt(nullptr, 16);
 
-            //qInfo() << "Adding color" << r << g << b;
             gridColors.push_back(QColor(r, g, b));
         }
         else
@@ -366,13 +348,12 @@ rgb_f Grid::calcColor()
 }
 void Grid::mousePressEvent(QMouseEvent* event)
 {
-    //qInfo() << "event:" << event->x() << event->y();
     if (event->button() == Qt::LeftButton)
     {
         L_click = true;
+        //  Remember mouse location
         mouse_pos = event->pos();
     }
-    //  Remember mouse location
 }
 void Grid::mouseReleaseEvent(QMouseEvent* event)
 {
@@ -441,7 +422,6 @@ void Grid::initPatterns()
         QString new_ptn_file_location = patterns_dir + ptns[i];
 
         Pattern* new_pattern = new Pattern(new_ptn_file_location, successful_init);
-        //new_name = loadPatternFile(patterns_dir + new_pattern_file);
         if (successful_init) 
         {
             patterns.push_back(new_pattern);

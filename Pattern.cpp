@@ -5,11 +5,9 @@ Pattern::Pattern(QString filename, bool& successful_init)
     dx = 0;
     dy = 0;
     successful_init = loadPatternFile(filename);
-    
 }
 bool Pattern::loadPatternFile(QString filename)
 {
-    // bool successful_init;
     qInfo() << "loading pattern" << filename;
     QString pattern_string;
 
@@ -164,7 +162,6 @@ void Pattern::draw(QOpenGLContext* context,  QOpenGLFramebufferObject* fb, int w
     int n_dx = qMin(dx, width - start_col);
     int n_dy = qMin(dy, height - start_row);
 
-    //qInfo() << "drawing pattern";
     // draw pattern
     for (int r=0; r<n_dy; r++) {
         for (int c=0; c<n_dx; c++) {
