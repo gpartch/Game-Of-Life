@@ -47,7 +47,14 @@ Grid::Grid(QWidget *parent) : QOpenGLWidget(parent)
     //loadPattern("../patterns/spacefillersynthactivation.rle");
     // initPatterns();
 }
-Grid::~Grid() {}
+Grid::~Grid() 
+{
+    int len = patterns.size();
+    for(int i=0; i<len; i++)
+    {
+        delete patterns.at(i);
+    }
+}
 QSize Grid::sizeHint() const
 {
     return QSize(500, 500);
@@ -65,6 +72,9 @@ void Grid::initializeGL()
     //  Link
     if (!shader->link())
         qFatal() << "Error linking shader\n"+shader->log();
+
+    // record context
+    ctxt = context();
 }
 void Grid::paintGL()
 {
@@ -194,6 +204,7 @@ void Grid::resizeGL(int w, int h)
     skip_iteration = false;
     update();
 }
+// process colors in color file for the gradient
 void Grid::readColorFile(const QString filename)
 {
     QFile file(filename);
@@ -252,34 +263,7 @@ void Grid::initGrid()
     // draw RLE pattern
     else
     {
-        // retrieve pattern information
-        vector<vector<bool>> pattern_grid = patterns.at(selected_pattern).pattern_grid;
-        int p_dx = patterns.at(selected_pattern).dx;
-        int p_dy = patterns.at(selected_pattern).dy;
-
-        // determine where to start on the grid + how wide the pattern can be
-        int start_col = qBound(0, width / 2 - p_dx / 2, width);
-        int start_row = qBound(0, height / 2 - p_dy / 2, height);
-        int dx = qMin(p_dx, width - start_col);
-        int dy = qMin(p_dy, height - start_row);
-
-        //qInfo() << "drawing pattern";
-        // draw pattern
-        for (int r=0; r<dy; r++) {
-            for (int c=0; c<dx; c++) {
-                if (pattern_grid.at(r).at(c)) {
-                    // Invert the y-coordinate
-                    int inverted_row = dy - 1 - r;
-
-                    glBegin(GL_QUADS);
-                        glVertex2f(start_col + c,       start_row + inverted_row);
-                        glVertex2f(start_col + c + 1,   start_row + inverted_row);
-                        glVertex2f(start_col + c + 1,   start_row + inverted_row + 1);
-                        glVertex2f(start_col + c,       start_row + inverted_row + 1);
-                    glEnd();
-                }
-            }
-        }
+        patterns.at(selected_pattern)->draw(context(), framebuffer[out], width, height);
     }
 }
 bool Grid::hasHeightForWidth() const
@@ -311,6 +295,7 @@ void Grid::gridPause()
     timer.stop();
     iter_timer.stop();
 }
+// format time in milliseconds to seconds and minutes
 QString Grid::formatTime(int time)
 {
     int iseconds = (time/1000)%60;
@@ -348,6 +333,7 @@ void Grid::gridRestart()
     skip_iteration = false;
     update();
 }
+// calculate the next color in the gradient based on number of iterations
 rgb_f Grid::calcColor()
 {
     // if the transition color has been fully transitioned to, change current color to transition color
@@ -438,186 +424,36 @@ void Grid::wheelEvent(QWheelEvent* event)
     skip_iteration = true;
     update();
 }
-QString Grid::loadPattern(QString filename)
-{
-    qInfo() << "loading pattern" << filename;
-    pattern new_pattern;
-    QString pattern_string;
-
-    if(!filename.contains(".rle"))
-    {
-        qInfo("Other file types not supported, must be a .rle file");
-        return "";
-    }
-    else loadRLE(filename, new_pattern);
-
-    pattern_string = loadRLE(filename, new_pattern);
-
-    if(pattern_string == "")
-    {
-        qInfo() << "Failed to load pattern" << filename;
-        return "";
-    }
-    else
-    {
-        //new_pattern.pattern_grid.resize(new_pattern.dy);
-        bool success = parseRLEString(pattern_string, new_pattern);
-        if(success) {patterns.push_back(new_pattern); return new_pattern.name;}
-        else return "";
-    }
-}
-QString Grid::loadRLE(QString filename, pattern& p)
-{
-    //  Open file
-    QFile file(filename);
-    if (!file.open(QIODevice::ReadOnly))
-    {
-        qInfo() << "Cannot open file "+filename;
-        return "";
-    }
-    QTextStream in(&file);
-    QString line = in.readLine();
-    //  Skip header
-    while (line[0] == '#')
-    {
-        if (line[1] == 'N') p.name = line.mid(3);
-        line = in.readLine();
-    }
-    if (p.name.isEmpty()) p.name = "unnamed" + QString::number(unnamed_pattern_ctr);
-    //  Process header line
-    line = line.simplified();
-    line.replace(" ","");
-    QStringList words = line.split(",");
-    if (words.length()<3) qInfo() << "Invalid header line "+line;
-    else if (!words[0].startsWith("x=")) qInfo() << "Missing x= "+line;
-    else if (!words[1].startsWith("y=")) qInfo() << "Missing y= "+line;
-    else if (!words[2].startsWith("rule=")) qInfo() << "Missing rule= "+line;
-    else if (words[2].mid(5) != "B3/S23" && words[2].mid(5) != "b3/s23") qInfo() << "Only rule B3/S23 implemented, "+words[2].mid(5)+" not supported.";
-    else
-    {
-        p.dx = words[0].mid(2).toInt();
-        p.dy = words[1].mid(2).toInt();
-        if(p.dx <= 0 || p.dy <= 0) qFatal(qPrintable(QString("Invalid pattern x or y value(s),(x,y): %1, %2").arg(p.dx).arg(p.dy)));
-        //  Read pattern
-        QString pattern_string = "";
-        while (!in.atEnd())
-        {
-            pattern_string += in.readLine();
-        }
-        //  Remove whitespace
-        pattern_string = pattern_string.simplified();
-        pattern_string.replace(" ", "");
-        //  Reset simulation
-        return pattern_string;
-    }
-    return "";
-}
-bool Grid::parseRLEString(QString rle, pattern &p)
-{
-    QQueue<bool> queue;
-    QString str_count;
-    int rle_len = rle.length();
-    for(int i=0; i<rle_len; i++)
-    {
-        char c = rle[i].unicode();
-        int count = str_count.toInt();
-        int diff = ((p.dx*p.dy)- queue.size()) % p.dx;
-        switch(c)
-        {
-            // dead
-            case 'b': 
-            {
-
-                if(count == 0) count = 1;
-                for(int j=0; j<count; j++) {queue.enqueue(0);}
-                str_count.clear();
-                break;
-            }
-            // alive
-            case 'o': 
-            {
-                if(count == 0) count = 1;
-                for(int j=0; j<count; j++) {queue.enqueue(1);} 
-                str_count.clear();
-                break;
-            }
-            // new line
-            case '$': 
-            {
-                // pad with 0s if necessary to get a full row
-                if(diff != 0) for(int j=0; j<diff; j++) {queue.enqueue(0);}
-                // account for $$ notation (extra line of 0s)
-                if(rle[i+1].unicode() == '$') {count+=2; i++;}
-                // need to add extra lines of 0s
-                if(count != 0)
-                {
-                    // adjust for rle notation, eg 2$ is just one extra line of 0s, not 2
-                    count--;
-                    for (int j=0; j<count; j++) {for(int k=0; k<p.dx; k++) {queue.enqueue(0);}}
-                }
-                str_count.clear();
-                break;
-            }
-            // end of rle
-            case '!':
-            {
-                // pad with 0s to get a full row
-                if(diff != 0) for(int j=0; j<diff; j++) {queue.enqueue(0);}
-                break;
-            }
-            default: str_count.append(c);
-        }
-    }
-
-    if(queue.size() % p.dx != 0 || queue.size()/p.dx != p.dy)
-    {
-        qInfo() << "invalid number of elements in queue!" << queue.size();
-        return false;
-        //qFatal("invalid number of elements in queue! %d",(int)queue.size());
-    }
-    // else if (queue.size()/p.dx != p.dy)
-    // {
-    //     // determine if there are too many lines or too few
-    //     int diff = p.dy - queue.size()/p.dx;
-    //     qInfo() << "invalid number of rows, diff:" << diff;
-    //     // too few, fill with 0s
-    //     if(diff > 0) for(int i=0; i<diff; i++) queue.enqueue(0);
-    //     else for(int i=0; i<diff; i++) queue.dequeue();
-    // }
-    else
-    {
-        p.pattern_grid.resize(p.dy);
-        for(int i=0; i<p.dy; i++)
-        {
-            for(int j=0; j<p.dx; j++)
-            {
-                bool e = queue.dequeue();
-                //e == 0 ? std::cout<<"0" : std::cout<<"1";
-                p.pattern_grid.at(i).push_back(e);
-            }
-        }
-        return true;
-    }
-}
+// process pattern files
 void Grid::initPatterns()
 {
     // add default random pattern
     emit viewerAddPattern("random");
+    // retrieve patterns directory
     QDir pd(patterns_dir);
+    // get pattern file names in patterns directory
     QStringList ptns = pd.entryList(QStringList() << "*.rle" << "*.RLE",QDir::Files);
+
     int len = ptns.length();
-    QString new_name;
     for(int i=0; i<len; i++)
     {
-        QString new_pattern_file = ptns[i];
-        new_name = loadPattern(patterns_dir + new_pattern_file);
-        if (new_name != "") {emit viewerAddPattern(new_name);}
+        bool successful_init;
+        QString new_ptn_file_location = patterns_dir + ptns[i];
+
+        Pattern* new_pattern = new Pattern(new_ptn_file_location, successful_init);
+        //new_name = loadPatternFile(patterns_dir + new_pattern_file);
+        if (successful_init) 
+        {
+            patterns.push_back(new_pattern);
+            emit viewerAddPattern(new_pattern->getName());
+        }
+        else delete new_pattern;
     }
     
 }
+// slot to update which pattern is being displayed on the grid
 void Grid::gridLoadPattern(int idx)
 {
-    //qInfo() << "gridLoadPattern called with idx" << idx;
     idx--;
     if(idx < -1 || idx >= static_cast<int>(patterns.size())) qInfo() << "Invalid pattern index selected:" << idx;
     else
@@ -632,9 +468,8 @@ void Grid::gridLoadPattern(int idx)
         update();
     }
 }
+// slot to set the time between iterations
 void Grid::gridSetFrequency(double new_t_step)
 {
-    // convert from seconds to milliseconds
-    //int new_t_step = t_step * 1000;
     iter_timer.setInterval(new_t_step);
 }

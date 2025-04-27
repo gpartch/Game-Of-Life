@@ -1,9 +1,14 @@
-HEADERS +=  Viewer.hpp \
-            Grid.hpp
+HEADERS +=  Pattern.hpp \
+            Grid.hpp \
+            Viewer.hpp 
+            
+            
 
-SOURCES +=  Viewer.cpp \
+SOURCES +=  Pattern.cpp \
             Grid.cpp \
-            GameOfLife.cpp
+            Viewer.cpp \
+            GameOfLife.cpp 
+            
 
 LIBS += -lopengl32
 

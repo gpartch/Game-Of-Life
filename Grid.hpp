@@ -22,33 +22,11 @@
 #include <QDir>
 #include <QWindow>
 
+#include "Pattern.hpp"
+
 using std::stoi;
 using std::vector;
 
-// Conway's Game Of Life:
-/* alive:
-[1] - 0
-[2] - 1
-[3] - 1
-[4] - 0
-[5] - 0
-[6] - 0
-[7] - 0
-[8] - 0
-*/
-/* dead:
-[1] - 1
-[2] - 1
-[3] - 0
-[4] - 1
-[5] - 1
-[6] - 1
-[7] - 1
-[8] - 1
-*/
-
-// does the state persist or flip based on the number of neighbors, 0 if it flips, 1 if the state stays the same
-//struct rule {int persist[8];};
 struct rgb_f 
 {
     float r,g,b;
@@ -73,7 +51,6 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
 {
     Q_OBJECT
     
-
     public:
         Grid(QWidget *parent = nullptr);
         ~Grid();
@@ -90,11 +67,8 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
         QString formatTime(int t);
         void setTextureProperties();
         rgb_f calcColor();
-        QString loadPattern(QString filename);
-        QString loadRLE(QString filename, pattern& p);
-        bool parseRLEString(QString rle, pattern &p);
+        
         void initPatterns();
-
 
         void mousePressEvent(QMouseEvent* e) override;
         void mouseReleaseEvent(QMouseEvent*) override;           //  Mouse released
@@ -128,9 +102,10 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
         QRandomGenerator* r_gen;
         QOpenGLFramebufferObject* framebuffer[2];
         QOpenGLShaderProgram* shader;
-        vector<pattern> patterns;
+        vector<Pattern*> patterns;
         QString patterns_dir;
         int unnamed_pattern_ctr;
+        QOpenGLContext* ctxt;
         
         // color
         QString colorfile;
@@ -159,9 +134,6 @@ class Grid : public QOpenGLWidget, protected QOpenGLFunctions
         void viewerIterations(QString iterations);
         void viewerFrequency(QString frequency);
         void viewerAddPattern(QString);
-
-    protected:
-        
 };
 
 #endif
